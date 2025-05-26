@@ -1,14 +1,14 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { getAllPosts, createPost } from '@/features/post/usecases/AllPosts'
+import { getPostId } from '@/features/post/usecases/AllPosts'
 import { GetAllCategory } from '@/features/post/usecases/AllCommunication'
 import { Post } from '@/features/post/models/Post'
 import { PostCard } from '@/features/post/components/PostCard'
 import { Category } from '@/features/post/models/Category'
 import { CreatPostDialog } from '@/features/post/components/CreatPostDialog'
 import Swal from 'sweetalert2'
-import { useAuth } from './context/AuthContext'
+import { useAuth } from '@/context/AuthContext'
 
 export default function HomePage() {
   const { signOut, username } = useAuth()
@@ -32,30 +32,31 @@ export default function HomePage() {
   })
 
   useEffect(() => {
+    let isMounted = true
+    if (!username) return
+
     const fetchData = async () => {
-      try {
-        const postsData = await getAllPosts()
-        const sorted = [...postsData].sort(
+      const [myPosts, categories] = await Promise.all([
+        getPostId(username),
+        GetAllCategory(),
+      ])
+
+      if (isMounted) {
+        const sorted = [...myPosts].sort(
           (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
         )
         setPosts(sorted)
-        const categoryData = await GetAllCategory()
-        setCategory(categoryData)
-      } catch (err: unknown) {
-        console.error(err)
-        Swal.fire({
-          icon: 'error',
-          title: 'เกิดข้อผิดพลาดในการโหลดข้อมูล',
-          showConfirmButton: false,
-          timer: 1000,
-        })
-      } finally {
+        setCategory(categories)
         setLoading(false)
       }
     }
 
     fetchData()
-  }, [])
+
+    return () => {
+      isMounted = false
+    }
+  }, [username])
 
   const filteredPosts = posts.filter((post) => {
     const matchSearch = post.title.toLowerCase().includes(search.toLowerCase())
@@ -89,39 +90,14 @@ export default function HomePage() {
     setShowTextAreaPost((prev) => !prev)
   }
 
-  const handlePostMain = async () => {
-    try {
-      const newPost = await createPost(areaPost)
-      Swal.fire({
-        icon: 'success',
-        title: 'โพสต์สำเร็จ',
-        showConfirmButton: false,
-        timer: 1500,
-      })
-      setPosts((prevPosts) => [newPost, ...prevPosts])
-    } catch (err: unknown) {
-      interface ErrorResponse {
-        response?: {
-          data?: {
-            message?: string;
-          };
-        };
-      }
-      const errorObj = err as ErrorResponse;
-      console.log(errorObj);
-      Swal.fire({
-        icon: 'error',
-        title: 'เกิดข้อผิดพลาด',
-        showConfirmButton: false,
-        timer: 1500,
-      })
-    }
+  const handlePostMain = () => {
+    console.log('Post clicked')
   }
-
 
   const handleCancelPostMain = () => {
     setShowTextAreaPost(false)
   }
+
 
   return (
     <div className="space-y-4">
@@ -167,8 +143,6 @@ export default function HomePage() {
               key={post.id}
               post={post}
               currentUser={username ?? undefined}
-              setPosts={setPosts}
-              posts={posts}
             />
           ))}
         </div>
@@ -184,6 +158,7 @@ export default function HomePage() {
         areaPost={areaPost}
         setAreaPost={setAreaPost}
       />
+
     </div>
   )
 }
