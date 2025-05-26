@@ -10,8 +10,8 @@
 
 ```bash
 # 1. Clone โพรเจ็ก
-$ git clone https://github.com/your-username/your-repo.git
-$ cd your-repo
+$ git clone https://github.com/teeerapon/fullstack-board-frontend.git
+$ cd fullstack-board-frontend
 ```
 
 ### 2. ติดตั้ง dependencies
